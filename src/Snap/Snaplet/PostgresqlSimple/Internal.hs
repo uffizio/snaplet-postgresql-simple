@@ -27,7 +27,7 @@ import qualified Database.PostgreSQL.Simple        as P
 -- | The state for the postgresql-simple snaplet. To use it in your app
 -- include this in your application state and use pgsInit to initialize it.
 data Postgres = PostgresPool (Pool P.Connection)
-              | PostgresConn P.Connection
+              | PostgresConn P.Connection Bool
 
 
 ------------------------------------------------------------------------------
@@ -146,8 +146,8 @@ withPG :: (HasPostgres m)
 withPG f = do
     s <- getPostgresState
     case s of
-      (PostgresPool p) -> withResource p (\c -> setLocalPostgresState (PostgresConn c) f)
-      (PostgresConn _) -> f
+      (PostgresPool p) -> withResource p (\c -> setLocalPostgresState (PostgresConn c False) f)
+      (PostgresConn _ _) -> f
 
 
 ------------------------------------------------------------------------------
@@ -173,4 +173,4 @@ liftPG' f = do
 -- connection.
 withConnection :: MonadIO m => Postgres -> (P.Connection -> IO b) -> m b
 withConnection (PostgresPool p) f = liftIO (withResource p f)
-withConnection (PostgresConn c) f = liftIO (f c)
+withConnection (PostgresConn c _) f = liftIO (f c)

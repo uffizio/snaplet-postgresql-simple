@@ -422,12 +422,30 @@ executeMany template qs = liftPG' (\c -> P.executeMany c template qs)
 
 
 ------------------------------------------------------------------------------
--- | Be careful that you do not call Snap's `finishWith` function anywhere
+-- | If not in a transaction, initiate a transaction. If already in a
+-- transaction, create a new savepoint instead. The transaction is committed (or
+-- the savepoint released) after the action finishes. In case of exception, the
+-- transaction is rolled back to the nearest savepoint if there is one, or to
+-- the beginning if there are none.
+--
+-- Be careful that you do not call Snap's `finishWith` function anywhere
 -- inside the function that you pass to `withTransaction`.  Doing so has been
 -- known to cause DB connection leaks.
 withTransaction :: (HasPostgres m)
                 => m a -> m a
-withTransaction = withTransactionMode P.defaultTransactionMode
+withTransaction act = do
+    pg <- getPostgresState
+    case pg of
+        PostgresConn _ True -> do
+            r <- liftBaseWith $ \run -> E.mask
+                              $ \unmask -> withConnection pg
+                              $ \con -> do
+                savepoint <- P.newSavepoint con
+                r <- unmask (run act) `E.onException` P.rollbackToAndReleaseSavepoint con savepoint
+                P.releaseSavepoint con savepoint
+                return r
+            restoreM r
+        _ -> withTransactionMode P.defaultTransactionMode act
 
 
 ------------------------------------------------------------------------------
@@ -452,7 +470,7 @@ withTransactionMode mode act = withPG $ do
                       $ \unmask -> withConnection pg
                       $ \con -> do
         P.beginMode mode con
-        r <- unmask (run act) `E.onException` P.rollback con
+        r <- unmask (run (setLocalPostgresState (PostgresConn con True) act)) `E.onException` P.rollback con
         P.commit con
         return r
     restoreM r
