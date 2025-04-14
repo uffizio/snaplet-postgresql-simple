@@ -1,6 +1,4 @@
 packages: ./snaplet-postgresql-simple.cabal
 
-source-repository-package
-    type: git
-    location: https://github.com/uffizio/snap.git
-    tag: master
+with-compiler: ghc-9.6.7
+
