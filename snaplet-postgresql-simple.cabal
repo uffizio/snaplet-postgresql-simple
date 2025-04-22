@@ -63,7 +63,7 @@ Library
     monad-control              >= 1.0     && < 1.1,
     mtl                        >= 2       && < 2.4,
     postgresql-simple          >= 0.3     && < 0.8,
-    resource-pool              >= 0.2     && < 0.3,
+    resource-pool              >= 0.3     && < 0.5,
     snap                       >= 1.0     && < 1.2,
     text                       >= 0.11    && < 3,
     transformers               >= 0.2     && < 0.7,

@@ -146,7 +146,7 @@ withPG :: (HasPostgres m)
 withPG f = do
     s <- getPostgresState
     case s of
-      (PostgresPool p) -> withResource p (\c -> setLocalPostgresState (PostgresConn c False) f)
+      (PostgresPool p) -> control $ \run -> withResource p (\c -> run (setLocalPostgresState (PostgresConn c False) f))
       (PostgresConn _ _) -> f
 
 
